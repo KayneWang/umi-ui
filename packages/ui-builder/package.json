@@ -1,7 +1,7 @@
 {
   "name": "@umijs/ui-builder",
   "description": "Umi UI plugin umd builder based on webpack 5",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "bin": {
     "ui-build": "bin/index.js"
   },
@@ -20,7 +20,7 @@
     "rimraf": "^3.0.2",
     "style-loader": "1.1.3",
     "terser-webpack-plugin": "2.3.5",
-    "webpack": "5.0.0-beta.14",
+    "webpack": "5.0.0-beta.16",
     "yargs-parser": "18.1.1"
   },
   "repository": {

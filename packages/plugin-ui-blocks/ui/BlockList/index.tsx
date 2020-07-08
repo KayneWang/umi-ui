@@ -1,9 +1,11 @@
 import React, { useMemo, useContext, useState, useEffect } from 'react';
 import { Empty, Row, Spin, Pagination } from 'antd';
 import { Block, AddBlockParams, Resource } from '@umijs/block-sdk/lib/data.d';
+import { ResourceType } from '@umijs/block-sdk/lib/enum';
 
 import styles from './index.module.less';
 import Context from '../UIApiContext';
+import BlockContext from '../components/BlockContext';
 import BlockItem from './BlockItem';
 
 interface BlockItemProps {
@@ -24,6 +26,7 @@ interface BlockListProps extends Omit<BlockItemProps, 'item'> {
 
 const BlockList: React.FC<BlockListProps> = props => {
   const { list = [], setSelectedTag, selectedTag, addingBlock, keyword, loading } = props;
+  const { currentResource } = useContext(BlockContext);
   const { api } = useContext(Context);
   const { useIntl } = api;
   const { formatMessage: intl } = useIntl();
@@ -42,18 +45,14 @@ const BlockList: React.FC<BlockListProps> = props => {
   /**
    * 筛选区块列表
    */
-  const filteredList: Block[] = useMemo<Block[]>(
-    () =>
-      list.filter(
-        ({ name = '', url, description = '', category, tags: listTags = [] }) =>
-          (!selectedTag ||
-            (category ? category === selectedTag : listTags.join('').includes(selectedTag))) &&
-          (!keyword ||
-            name.toLocaleLowerCase().includes(keyword) ||
-            description.toLocaleLowerCase().includes(keyword) ||
-            url.toLocaleLowerCase().includes(keyword)),
-      ),
-    [keyword, selectedTag, list.map(({ url }) => url).join('/')],
+  const filteredList: Block[] = list.filter(
+    ({ name = '', url, description = '', category, tags: listTags = [] }) =>
+      (!selectedTag ||
+        (category ? category === selectedTag : listTags.join('').includes(selectedTag))) &&
+      (!keyword ||
+        name.toLocaleLowerCase().includes(keyword) ||
+        description.toLocaleLowerCase().includes(keyword) ||
+        url.toLocaleLowerCase().includes(keyword)),
   );
 
   /**
@@ -107,16 +106,28 @@ const BlockList: React.FC<BlockListProps> = props => {
         }}
       >
         <Row gutter={[20, 20]} type="flex">
-          {currentPageList.map(item => (
-            <BlockItem
-              key={item.url}
-              item={item}
-              {...props}
-              loading={addingBlock && item.url === addingBlock.url}
-              disabled={addingBlock && addingBlock.url && item.url !== addingBlock.url}
-              selectedTag={selectedTag}
-            />
-          ))}
+          {currentPageList.map(item => {
+            const blockItemPropsMap = {
+              [ResourceType.dumi]: {
+                key: item.identifier,
+                loading: addingBlock && item.identifier === addingBlock.identifier,
+                disabled: addingBlock && item.identifier === addingBlock.identifier,
+              },
+              default: {
+                key: item.url,
+                loading: addingBlock && item.url === addingBlock.url,
+                disabled: addingBlock && addingBlock.url && item.url !== addingBlock.url,
+              },
+            };
+            return (
+              <BlockItem
+                {...props}
+                {...(blockItemPropsMap[currentResource?.resourceType] || blockItemPropsMap.default)}
+                item={item}
+                selectedTag={selectedTag}
+              />
+            );
+          })}
         </Row>
         {filteredList.length > pageSize && (
           <Row className={styles.pagination} type="flex" justify="end">

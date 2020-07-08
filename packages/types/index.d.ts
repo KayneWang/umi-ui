@@ -181,6 +181,8 @@ declare namespace IUI {
     /** https://xtermjs.org/docs/api/terminal/interfaces/iterminaloptions/ */
     config?: ITerminalOptions;
     onResize?: (ins: XTerminal) => void;
+    /** terminal close */
+    onClose?: () => void;
     [key: string]: any;
   }
 
@@ -397,6 +399,7 @@ declare namespace IUI {
     /** whether Bigfish */
     readonly bigfish: boolean;
     readonly _analyze: IAnalyze;
+    readonly history: any;
     /** currentProject  */
     currentProject: ICurrentProject;
     /** get current locale: zh-CN or en-US */

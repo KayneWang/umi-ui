@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, lstatSync, statSync, readFileSync, writeFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, parse } from 'path';
 import crequire from 'crequire';
 import upperCamelCase from 'uppercamelcase';
 import inquirer from 'inquirer';
@@ -49,7 +49,7 @@ export function getNameFromPkg(pkg) {
   if (!pkg.name) {
     return null;
   }
-  return pkg.name.split('/').pop();
+  return parse(pkg.name).base;
 }
 
 /**
@@ -63,7 +63,7 @@ function checkConflict(blockDeps, projectDeps) {
   Object.keys(blockDeps).forEach(dep => {
     if (!projectDeps[dep]) {
       lacks.push([dep, blockDeps[dep]]);
-    } else if (!semver.intersects(projectDeps[dep], blockDeps[dep])) {
+    } else if (!semver.intersects(projectDeps[dep], blockDeps[dep], true)) {
       conflicts.push([dep, blockDeps[dep], projectDeps[dep]]);
     }
   });

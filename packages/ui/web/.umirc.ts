@@ -1,8 +1,7 @@
-import { join } from 'path';
+import { join, parse } from 'path';
 import LessThemePlugin from 'webpack-less-theme-plugin';
 import { defineConfig, utils } from 'umi';
 import { dark } from '@umijs/ui-theme';
-import { version } from 'antd';
 
 const { NODE_ENV } = process.env;
 const { winPath } = utils;
@@ -17,12 +16,35 @@ const terserOptions =
       }
     : {};
 
+const externalCSS = ['xterm/css/xterm.css'];
+const externalJS = [
+  `react/umd/react.${NODE_ENV === 'production' ? 'production.min' : 'development'}.js`,
+  `react-dom/umd/react-dom.${NODE_ENV === 'production' ? 'production.min' : 'development'}.js`,
+  'moment/min/moment.min.js',
+  'antd/dist/antd.min.js',
+  'sockjs-client/dist/sockjs.min.js',
+  'xterm/lib/xterm.js',
+];
+
+const publicPath = NODE_ENV === 'development' ? 'http://localhost:8002/' : '/';
+const outputPath = NODE_ENV === 'development' ? './public' : './dist';
+
 export default defineConfig({
   presets: ['@umijs/preset-react'],
+  plugins: ['@umijs/plugin-esbuild'],
   nodeModulesTransform: {
     type: 'none',
   },
-  publicPath: NODE_ENV === 'development' ? 'http://localhost:8002/' : '/',
+  outputPath,
+  devServer: {
+    // dev write assets into public
+    writeToDisk: (filePath: string) =>
+      [...externalJS, ...externalCSS].some(
+        external => parse(external).base === parse(filePath).base,
+      ),
+  },
+  esbuild: {},
+  publicPath,
   history: {
     type: 'browser',
   },
@@ -31,33 +53,19 @@ export default defineConfig({
   // uglifyJSOptions,
   terserOptions,
   links: [
-    {
+    ...externalCSS.map(external => ({
       rel: 'stylesheet',
-      href: '//gw.alipayobjects.com/os/lib/xterm/4.1.0/css/xterm.css',
-    },
-  ],
-  headScripts: [
-    // polyfill
-    {
-      src: '//gw.alipayobjects.com/as/g/component/map-set-polyfill/1.0.0/polyfill.min.js',
-    },
-    {
-      src: `//gw.alipayobjects.com/os/lib/??react/16.13.0/umd/react.${
-        NODE_ENV === 'development' ? 'development' : 'production.min'
-      }.js,react-dom/16.13.0/umd/react-dom.${
-        NODE_ENV === 'development' ? 'development' : 'production.min'
-      }.js`,
-    },
-    {
-      src: '//gw.alipayobjects.com/os/lib/moment/2.22.2/min/moment.min.js',
-    },
-    {
-      src: `//gw.alipayobjects.com/os/lib/antd/${version}/dist/antd.min.js`,
-    },
-    { src: '//gw.alipayobjects.com/os/lib/sockjs-client/1.4.0/dist/sockjs.min.js' },
-    { src: '//gw.alipayobjects.com/os/lib/xterm/4.1.0/lib/xterm.js' },
+      href: `${publicPath}${parse(external).base}`,
+    })),
   ],
   antd: {},
+  scripts: [
+    // polyfill
+    ...externalJS.map(external => ({
+      src: `${publicPath}${parse(external).base}`,
+      crossOrigin: 'anonymous',
+    })),
+  ],
   externals: {
     react: 'window.React',
     'react-dom': 'window.ReactDOM',
@@ -138,6 +146,23 @@ export default defineConfig({
         theme: join(__dirname, './src/styles/parameters.less'),
       }),
     );
+    const { path: absOutputPath } = config.toConfig().output;
+    const to = NODE_ENV === 'development' ? join(__dirname, 'public') : absOutputPath;
+
+    config.plugin('copy').tap(([args]) => [
+      [
+        ...args,
+        ...externalCSS.map(external => ({
+          from: require.resolve(external),
+          to,
+        })),
+        ...externalJS.map(external => ({
+          from: require.resolve(external),
+          to,
+        })),
+      ],
+    ]);
+
     return config;
   },
 });
